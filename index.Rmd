@@ -1,0 +1,43 @@
+---
+title: "Machine learning in economics - Lab sessions"
+author: "Hannah Bull and Philipp Ketz"
+date: "Semester 2, 2019/20"
+output: 
+ html_document:
+    number_sections: true
+    theme: cosmo
+---
+
+<style>
+  body {background-color:lavender}
+</style>
+
+# Class preparation
+
+Please download R and RStudio before the first lab session.
+
+If you are unfamiliar with R, please consult the M1 R tutorials [here](https://introtor-pse.appspot.com/) before the first session. 
+
+# Links to lab sessions 
+
+[Lab 1](https://ml-in-econ.appspot.com/lab1.html): Applying ML techniques to predict income with satellite data using the R package SuperLearner
+
+[Lab 2](https://ml-in-econ.appspot.com/lab2.html): Estimating causal effects using double machine learning
+
+[Lab 3](https://ml-in-econ.appspot.com/lab3.html): Implementing honest trees and causal forests to estimate heterogenous treatment effects
+
+# Links to assignments
+
+[Homework 1](https://ml-in-econ.appspot.com/hwk1.html): Data challenge - predicting Bernie's and Trump's tweets
+
+[Homework 2](https://ml-in-econ.appspot.com/hwk2.html): An extension of double ML, and practice on a voter turnout experiment
+
+[Homework 3](https://ml-in-econ.appspot.com/hwk3.html): Treatment Effect Heterogeneity, practice on a welfare survey
+
+# Assignment and project submission
+
+If the below link does not work, just send me your homeworks via email. 
+
+[Submission link](https://script.google.com/macros/s/AKfycbzurFxpdVKaIVVRduMGj0Wzk6OMn2pL99vGCGrY/exec) 
+
+All homeworks must be submitted in a zipped folder called **labX_firstname_lastname.zip**, where $X\in\{1,2,3\}$, e.g. **lab1_hannah_bull.zip**.

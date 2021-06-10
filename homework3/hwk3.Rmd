@@ -1,0 +1,48 @@
+---
+title: "Homework 3: Treatment Effect Heterogeneity"
+author: "Hannah Bull and Philipp Ketz"
+date: "Semester 2, 2019/20"
+output: 
+ html_document:
+    number_sections: true
+    theme: cosmo
+---
+
+<style>
+  body {background-color:lavender}
+</style>
+
+# Submission instructions 
+
+Create a folder called **lab3_firstname_lastname**. This folder should contain files called: 
+
+- firstname_lastname_code.R
+- firstname_lastname_report.pdf (1 page)
+
+Zip this folder to **lab3_firstname_lastname.zip** and upload it to the link on the homepage. 
+
+# Task 
+
+[Download the data here](https://drive.google.com/drive/folders/1-AAfzXaKwgGXIoD57eVwo39bTuXGEzXE?usp=sharing).
+
+To better understand the data, you can read section 3.1 of the article [Modeling Heterogeneous Treatment Effects in Survey Experiments with Bayesian Additive Regression Trees](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.190.3826&rep=rep1&type=pdf) by Green and Kern (2012). 
+
+Note that the information on the variables is saved in the .rds file. See for example `attr(df$polviews, c("labels"))` and `attr(df$polviews, c("label"))`. Don't worry too much about cleaning the data or fully understanding the variables. 
+
+The dataset for this homework comes from a very large survey in the US, where participants were randomly asked one of two questions with similar wording:
+
+> We are faced with many problems in this country, none of which can be solved easily or inexpensively. I’m going to name some of these problems, and for each one I’d like you to tell me whether you think we’re spending too much money on it, too little money, or about the right amount. Are we spending too much, too little, or about the right amount on (welfare/assitance to the poor)?
+
+The treatment $W$ is the wording of the question (0/1). The outcome $Y$ is that the person surveyed thinks the government spends too much. 
+
+Correctly apply Causal Trees, BLP and GATES to the data to answer the following questions: 
+
+- Is there treatement effect heterogeneity? 
+
+- Where is this heterogeneity?
+
+In your opinion, what are the advantages and limitations of Causal Trees, BLP and GATES? Can you propose methods to overcome the limitations you have identified? 
+
+# Grading 
+
+This homework is worth 4 marks: 1 mark for clean code and 3 marks for your report.

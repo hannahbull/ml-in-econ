@@ -1,0 +1,207 @@
+---
+title: "Lab 2 corrections"
+author: "Hannah Bull and Philipp Ketz"
+date: "Semester 2, 2019/20"
+output: 
+ html_document:
+    number_sections: true
+    theme: cosmo
+---
+
+<style>
+  body {background-color:lavender}
+</style>
+
+
+# Lasso 
+
+## Lasso as a screening algorithm (biased)
+
+Assuming the data generating process is: 
+
+$Y = X_{sub}\beta+\varepsilon$ 
+
+where $X_{sub}$ is a subset of the possible variables $X$, using lasso to screen variables then applying OLS gives a biased estimate of the $\hat{\beta}$ of interest. (See slides #8.)
+
+```{r, eval=FALSE}
+beta_X = c()
+for (i in 1:100) {
+  print(i)
+  dgp = generate_data()
+  
+  SL.library <- list(c("SL.lm", "screen.glmnet"))
+  sl_screening_lasso <- SuperLearner(Y = dgp$y,
+                      X = data.frame(x=dgp$x, w=dgp$w), family = gaussian(),
+                      SL.library = SL.library, cvControl = list(V=0))
+    
+  # why this if ... else ... ? 
+  if (names(sl_screening_lasso$fitLibrary$SL.lm_screen.glmnet$object$coefficients)[2]=="x") { 
+    beta_X = c(beta_X, sl_screening_lasso$fitLibrary$SL.lm_screen.glmnet$object$coefficients[2])
+  } else {
+    beta_X = c(beta_X, 0)
+  }
+}
+
+beta_X_df <- data.frame(beta_X=beta_X)
+ggplot(beta_X_df, aes(x = beta_X)) + geom_histogram(binwidth = 0.02)
+``` 
+
+## Double Selection with Lasso (unbiased under correct functional form assumption)
+
+Assuming the data generating process is: 
+
+$Y = X_{sub}\beta+\varepsilon$ 
+
+where $X_{sub}$ is a subset of the possible variables $X$, we can use Double Selection to get unbiased esimates for the $\hat{\beta}$ of interest. (See slides #10 and #11.)
+
+```{r, eval=FALSE}
+beta_X = c()
+for (i in 1:100) {
+  print(i)
+  dgp = generate_data()
+  
+  SL.library <- lasso$names
+  sl_lasso <- SuperLearner(Y = dgp$y,
+                           X = data.frame(x=dgp$x, w=dgp$w), 
+                           family = gaussian(),
+                           SL.library = SL.library, 
+                           cvControl = list(V=0))
+  
+  kept_variables <- which(get_lasso_coeffs(sl_lasso)!=0) - 1 # minus 1 as X is listed
+  kept_variables <- kept_variables[kept_variables>0]
+    
+  sl_pred_x <- SuperLearner(Y = dgp$x,
+                            X = data.frame(w=dgp$w), 
+                            family = gaussian(),
+                            SL.library = lasso$names, cvControl = list(V=0))
+  
+  kept_variables2 <- which(get_lasso_coeffs(sl_pred_x)!=0) 
+  kept_variables2 <- kept_variables2[kept_variables2>0]
+  
+  sl_screening_lasso <- SuperLearner(Y = dgp$y,
+                                     X = data.frame(x = dgp$x, w = dgp$w[, c(kept_variables, kept_variables2)]), 
+                                     family = gaussian(),
+                                     SL.library = "SL.lm", 
+                                     cvControl = list(V=0))
+  
+  beta_X = c(beta_X, coef(sl_screening_lasso$fitLibrary$SL.lm_All$object)[2])
+}
+
+beta_X_df <- data.frame(beta_X=beta_X)
+ggplot(beta_X_df, aes(x = beta_X)) + geom_histogram(binwidth = 0.02)
+``` 
+
+## Naïve Frisch-Waugh
+
+Works only in the linear case.
+
+## Double machine learning 
+
+We aim to create a function called `doubleml` which takes as input a vector `X`, a dataframe `W` and a vector `Y`, as well as a value for `SL.library.X`, `SL.library.Y`, `family.X` and `family.Y`. Double ML is almost exactly the same as our previous esimator, but we switch the samples and repeat the process. Moreover, we will add a simple estimate of the standard error.  
+
+The framework for the function is given as follows: 
+
+```{r, eval=FALSE}
+doubleml <- function(X, W, Y, SL.library.X = "SL.lm",  SL.library.Y = "SL.lm", family.X = gaussian(), family.Y = gaussian()) {
+  
+ ### STEP 1: split X, W and Y into 2 random sets
+  split <- sample(seq_len(length(Y)), size = ceiling(length(Y)/2))
+  
+  Y1 = Y[split]
+  Y2 = Y[-split]
+  
+  X1 = X[split]
+  X2 = X[-split]
+  
+  W1 = W[split, ]
+  W2 = W[-split, ]
+  
+  ### STEP 2a: use a SuperLearner to train a model for E[X|W] on set 1 and predict X on set 2 using this model. Do the same but training on set 2 and predicting on set 1
+  sl_x1 = SuperLearner(Y = X1, 
+                       X = data.frame(W1), 
+                       newX= data.frame(W2), 
+                       family = family.X, 
+                       SL.library = SL.library.X, 
+                       cvControl = list(V=0))
+  x_hat_2 <- sl_x1$SL.predict
+  
+  sl_x2 = SuperLearner(Y = X2, 
+                       X = data.frame(W2), 
+                       newX= data.frame(W1), 
+                       family = family.X, 
+                       SL.library = SL.library.X,
+                       cvControl = list(V=0))
+  x_hat_1 <- sl_x2$SL.predict
+  
+  ### STEP 2b: get the residuals X - X_hat on set 2 and on set 1
+  res_x_2 <- X2 - x_hat_2
+  res_x_1 <- X1 - x_hat_1
+  
+  ### STEP 3a: use a SuperLearner to train a model for E[Y|W] on set 1 and predict Y on set 2 using this model. Do the same but training on set 2 and predicting on set 1
+  sl_y1 = SuperLearner(Y = Y1, 
+                       X = data.frame(W1), 
+                       newX= data.frame(W2), 
+                       family = family.Y, 
+                       SL.library = SL.library.Y,
+                       cvControl = list(V=0))
+  y_hat_2 <- sl_y1$SL.predict
+  sl_y2 = SuperLearner(Y = Y2, 
+                       X = data.frame(W2), 
+                       newX= data.frame(W1), 
+                       family = family.Y, 
+                       SL.library = SL.library.Y,
+                       cvControl = list(V=0))
+  y_hat_1 <- sl_y2$SL.predict
+  
+  ### STEP 3b: get the residuals Y - Y_hat on set 2 and on set 1
+  res_y_2 <- Y2 - y_hat_2
+  res_y_1 <- Y1 - y_hat_1
+  
+  ### STEP 4: regress (Y - Y_hat) on (X - X_hat) on set 1 and on set 2, and get the coefficients of (X - X_hat)
+  beta1 = (mean(res_x_1*res_y_1))/(mean(res_x_1*res_x_1))
+  beta2 = (mean(res_x_2*res_y_2))/(mean(res_x_2*res_x_2))
+  
+  ### STEP 5: take the average of these 2 coefficients from the 2 sets (= beta)
+  beta=0.5*(beta1+beta2)
+
+  ### STEP 6: compute standard errors (done for you). This is just the usual OLS standard errors in the regression res_y = res_x*beta + eps. 
+  psi_stack = c((res_y_1-res_x_1*beta), (res_y_2-res_x_2*beta))
+  res_stack = c(res_x_1, res_x_2)
+  se = sqrt(mean(res_stack^2)^(-2)*mean(res_stack^2*psi_stack^2))/sqrt(length(Y))
+
+  return(c(beta,se))
+}
+``` 
+
+We can now test this function on our dataset: 
+
+```{r, eval=FALSE}
+doubleml(X=dgp$x, W=dgp$w, Y=dgp$y, SL.library.X = "SL.xgboost",  SL.library.Y = "SL.xgboost")
+``` 
+
+We can do this 100 times to demonstrate the performance of double ML.
+
+```{r, eval=FALSE}
+beta_X = c()
+se_X = c()
+for (i in 1:100) {
+  tryCatch({
+      print(i)
+      dgp = generate_data()
+      
+      DML = doubleml(X=dgp$x, W=dgp$w, Y=dgp$y, SL.library.X = "SL.xgboost",  SL.library.Y = "SL.xgboost")
+    
+      beta_X = c(beta_X, DML[1])
+      se_X = c(se_X, DML[2])
+      
+    }, error = function(e) {
+      print(paste("Error for", i))
+  })
+}
+
+beta_X_df <- data.frame(beta_X=beta_X)
+ggplot(beta_X_df, aes(x = beta_X)) + geom_histogram(binwidth = 0.02)
+print(mean(se_X))
+```
+
+![Double ML using `xgboost` and 4000 simulations](dml4k001.png)
